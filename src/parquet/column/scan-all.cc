@@ -20,32 +20,32 @@
 namespace parquet {
 
 int64_t ScanAllValues(int32_t batch_size, int16_t* def_levels, int16_t* rep_levels,
-    uint8_t* values, int64_t* values_buffered, parquet::ColumnReader* reader) {
+    uint8_t* values, int64_t* values_buffered, parquet::ColumnReader* reader, bool* null_values) {
   switch (reader->type()) {
     case parquet::Type::BOOLEAN:
       return ScanAll<parquet::BoolReader>(
-          batch_size, def_levels, rep_levels, values, values_buffered, reader);
+          batch_size, def_levels, rep_levels, values, values_buffered, null_values, reader);
     case parquet::Type::INT32:
       return ScanAll<parquet::Int32Reader>(
-          batch_size, def_levels, rep_levels, values, values_buffered, reader);
+          batch_size, def_levels, rep_levels, values, values_buffered, null_values, reader);
     case parquet::Type::INT64:
       return ScanAll<parquet::Int64Reader>(
-          batch_size, def_levels, rep_levels, values, values_buffered, reader);
+          batch_size, def_levels, rep_levels, values, values_buffered, null_values, reader);
     case parquet::Type::INT96:
       return ScanAll<parquet::Int96Reader>(
-          batch_size, def_levels, rep_levels, values, values_buffered, reader);
+          batch_size, def_levels, rep_levels, values, values_buffered, null_values, reader);
     case parquet::Type::FLOAT:
       return ScanAll<parquet::FloatReader>(
-          batch_size, def_levels, rep_levels, values, values_buffered, reader);
+          batch_size, def_levels, rep_levels, values, values_buffered, null_values, reader);
     case parquet::Type::DOUBLE:
       return ScanAll<parquet::DoubleReader>(
-          batch_size, def_levels, rep_levels, values, values_buffered, reader);
+          batch_size, def_levels, rep_levels, values, values_buffered, null_values, reader);
     case parquet::Type::BYTE_ARRAY:
       return ScanAll<parquet::ByteArrayReader>(
-          batch_size, def_levels, rep_levels, values, values_buffered, reader);
+          batch_size, def_levels, rep_levels, values, values_buffered, null_values, reader);
     case parquet::Type::FIXED_LEN_BYTE_ARRAY:
       return ScanAll<parquet::FixedLenByteArrayReader>(
-          batch_size, def_levels, rep_levels, values, values_buffered, reader);
+          batch_size, def_levels, rep_levels, values, values_buffered, null_values, reader);
     default:
       parquet::ParquetException::NYI("type reader not implemented");
   }

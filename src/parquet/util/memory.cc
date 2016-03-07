@@ -366,7 +366,7 @@ int64_t ArrowFileMethods::Tell() {
 
 ArrowInputFile::ArrowInputFile(
     const std::shared_ptr<::arrow::io::ReadableFileInterface>& file)
-    : file_(file) {}
+    : file_(file), source_name_("Arrow Source") {}
 
 ::arrow::io::FileInterface* ArrowInputFile::file_interface() {
   return file_.get();

@@ -516,6 +516,7 @@ set(LIBPARQUET_SRCS
   src/parquet/column/statistics.cc
 
   src/parquet/compression.cc
+  src/parquet/cxx09api/reader.cc
 
   src/parquet/file/metadata.cc
   src/parquet/file/reader.cc
@@ -608,6 +609,7 @@ endif()
 
 add_subdirectory(src/parquet)
 add_subdirectory(src/parquet/api)
+add_subdirectory(src/parquet/cxx09api)
 add_subdirectory(src/parquet/column)
 add_subdirectory(src/parquet/file)
 add_subdirectory(src/parquet/util)

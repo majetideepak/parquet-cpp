@@ -117,6 +117,10 @@ std::shared_ptr<FileMetaData> ParquetFileReader::metadata() const {
   return contents_->metadata();
 }
 
+const std::string& ParquetFileReader::GetStreamName() const {
+  return contents_->GetStreamName();
+}
+
 std::shared_ptr<RowGroupReader> ParquetFileReader::RowGroup(int i) {
   DCHECK(i < metadata()->num_row_groups()) << "The file only has "
                                            << metadata()->num_row_groups()
@@ -124,6 +128,56 @@ std::shared_ptr<RowGroupReader> ParquetFileReader::RowGroup(int i) {
   return contents_->GetRowGroup(i);
 }
 
+void CheckSelectedColumns(std::list<int>& selected_columns, int num_columns) {
+  if (selected_columns.size() == 0) {
+    for (int i = 0; i < num_columns; i++) {
+      selected_columns.push_back(i);
+    }
+  } else {
+    for (auto i : selected_columns) {
+      if (i < 0 || i >= num_columns) {
+        throw parquet::ParquetException("Selected column is out of range");
+      }
+    }
+  }
+}
+
+ParquetFileReader::MemoryUsage ParquetFileReader::EstimateMemoryUsage(
+    std::list<int>& selected_columns, int r, int64_t batch_size,
+    int64_t column_reader_size) {
+  CheckSelectedColumns(selected_columns, metadata()->num_columns());
+
+  ParquetFileReader::MemoryUsage memory_usage;
+  // size of BufferedInputStream
+  if (column_reader_size == 0) {
+    for (auto i : selected_columns) {
+      memory_usage.memory +=
+          metadata()->RowGroup(r)->ColumnChunk(i)->total_compressed_size();
+    }
+  } else {
+    memory_usage.memory += selected_columns.size() * column_reader_size;
+  }
+  // 1MB is the max DataPage size
+  memory_usage.memory += selected_columns.size() * 1024 * 1024;
+  // account for uncompressed data
+  for (auto i : selected_columns) {
+    if (metadata()->RowGroup(r)->ColumnChunk(i)->compression() !=
+        Compression::UNCOMPRESSED) {
+      memory_usage.memory += 1024 * 1024;  // 1MB buffer for uncompressed
+    }
+  }
+
+  int64_t rowgroup_memory = 0;
+  for (auto i : selected_columns) {
+    // account for vertica's batch buffer
+    rowgroup_memory +=
+        GetTypeByteSize(metadata()->schema()->Column(i)->physical_type()) * batch_size;
+  }
+  memory_usage.memory = std::max(
+      memory_usage.memory + rowgroup_memory, static_cast<int64_t>(metadata()->size()));
+
+  return memory_usage;
+}
 // ----------------------------------------------------------------------
 // ParquetFileReader::DebugPrint
 

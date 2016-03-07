@@ -19,6 +19,7 @@
 #define PARQUET_FILE_READER_INTERNAL_H
 
 #include <cstdint>
+#include <list>
 #include <memory>
 #include <vector>
 
@@ -108,6 +109,7 @@ class SerializedFile : public ParquetFileReader::Contents {
   void Close() override;
   std::shared_ptr<RowGroupReader> GetRowGroup(int i) override;
   std::shared_ptr<FileMetaData> metadata() const override;
+  virtual const std::string& GetStreamName() const;
   virtual ~SerializedFile();
 
  private:

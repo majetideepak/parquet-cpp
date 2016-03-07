@@ -275,6 +275,8 @@ class PARQUET_EXPORT RandomAccessSource : virtual public FileInterface {
 
   virtual std::shared_ptr<Buffer> ReadAt(int64_t position, int64_t nbytes) = 0;
 
+  virtual const std::string& source_name() const = 0;
+
   /// Returns bytes read
   virtual int64_t ReadAt(int64_t position, int64_t nbytes, uint8_t* out) = 0;
 };
@@ -318,6 +320,8 @@ class PARQUET_EXPORT ArrowInputFile : public ArrowFileMethods, public RandomAcce
 
   std::shared_ptr<::arrow::io::ReadableFileInterface> file() const { return file_; }
 
+  const std::string& source_name() const { return source_name_; }
+
   // Diamond inheritance
   using ArrowFileMethods::Close;
   using ArrowFileMethods::Tell;
@@ -325,6 +329,7 @@ class PARQUET_EXPORT ArrowInputFile : public ArrowFileMethods, public RandomAcce
  private:
   ::arrow::io::FileInterface* file_interface() override;
   std::shared_ptr<::arrow::io::ReadableFileInterface> file_;
+  std::string source_name_;
 };
 
 class PARQUET_EXPORT ArrowOutputStream : public ArrowFileMethods, public OutputStream {

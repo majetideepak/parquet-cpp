@@ -240,6 +240,10 @@ std::shared_ptr<FileMetaData> SerializedFile::metadata() const {
   return file_metadata_;
 }
 
+const std::string& SerializedFile::GetStreamName() const {
+  return source_->source_name();
+}
+
 SerializedFile::SerializedFile(std::unique_ptr<RandomAccessSource> source,
     const ReaderProperties& props = default_reader_properties())
     : source_(std::move(source)), properties_(props) {}

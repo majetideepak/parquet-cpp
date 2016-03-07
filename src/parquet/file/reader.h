@@ -65,6 +65,14 @@ class PARQUET_EXPORT RowGroupReader {
 
 class PARQUET_EXPORT ParquetFileReader {
  public:
+  struct MemoryUsage {
+    // Estimated dynamic memory usage (not including memory usage for dictionaries).
+    int64_t memory;
+    // This flag is set if any column is dictionary-encoded.
+    bool has_dictionary;
+    MemoryUsage() : memory(0), has_dictionary(false) {}
+  };
+
   // Forward declare a virtual class 'Contents' to aid dependency injection and more
   // easily create test fixtures
   // An implementation of the Contents class is defined in the .cc file
@@ -74,6 +82,7 @@ class PARQUET_EXPORT ParquetFileReader {
     virtual void Close() = 0;
     virtual std::shared_ptr<RowGroupReader> GetRowGroup(int i) = 0;
     virtual std::shared_ptr<FileMetaData> metadata() const = 0;
+    virtual const std::string& GetStreamName() const = 0;
   };
 
   ParquetFileReader();
@@ -110,6 +119,12 @@ class PARQUET_EXPORT ParquetFileReader {
 
   // Returns the file metadata. Only one instance is ever created
   std::shared_ptr<FileMetaData> metadata() const;
+
+  const std::string& GetStreamName() const;
+
+  // Estimate dynamic memory usage
+  MemoryUsage EstimateMemoryUsage(std::list<int>& selected_columns, int row_group,
+      int64_t batch_size, int64_t column_reader_size = 0);
 
   void DebugPrint(
       std::ostream& stream, std::list<int> selected_columns, bool print_values = true);
