@@ -18,7 +18,7 @@
 #ifndef PARQUET_UTIL_MEMORY_POOL_H
 #define PARQUET_UTIL_MEMORY_POOL_H
 
-#include <cstdint>
+#include <stdint.h>
 
 #include "parquet/util/visibility.h"
 

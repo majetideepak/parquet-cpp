@@ -224,22 +224,22 @@ void SerializedFile::ParseMetaData() {
     throw ParquetException("Invalid parquet file. Corrupt footer.");
   }
 
-  uint32_t metadata_len = *reinterpret_cast<uint32_t*>(footer_buffer);
-  int64_t metadata_start = filesize - FOOTER_SIZE - metadata_len;
-  if (FOOTER_SIZE + metadata_len > filesize) {
+  uint32_t metadata_length = *reinterpret_cast<uint32_t*>(footer_buffer);
+  int64_t metadata_start = filesize - FOOTER_SIZE - metadata_length;
+  if (FOOTER_SIZE + metadata_length > filesize) {
     throw ParquetException(
         "Invalid parquet file. File is less than "
         "file metadata size.");
   }
   source_->Seek(metadata_start);
 
-  OwnedMutableBuffer metadata_buffer(metadata_len, properties_.allocator());
-  bytes_read = source_->Read(metadata_len, &metadata_buffer[0]);
-  if (bytes_read != metadata_len) {
+  OwnedMutableBuffer metadata_buffer(metadata_length, properties_.allocator());
+  bytes_read = source_->Read(metadata_length, &metadata_buffer[0]);
+  if (bytes_read != metadata_length) {
     throw ParquetException("Invalid parquet file. Could not read metadata bytes.");
   }
 
-  file_metadata_ = FileMetaData::Make(&metadata_buffer[0], &metadata_len);
+  file_metadata_ = FileMetaData::Make(&metadata_buffer[0], &metadata_length);
 }
 
 }  // namespace parquet

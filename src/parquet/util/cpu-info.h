@@ -21,7 +21,6 @@
 #ifndef PARQUET_UTIL_CPU_INFO_H
 #define PARQUET_UTIL_CPU_INFO_H
 
-#include <cstdint>
 #include <string>
 
 #include "parquet/util/logging.h"

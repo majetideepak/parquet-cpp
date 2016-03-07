@@ -55,6 +55,11 @@ class PARQUET_EXPORT ColumnReader {
     return true;
   }
 
+  int64_t GetRemaining() {
+    if (!HasNext()) { return 0; }
+    return num_buffered_values_ - num_decoded_values_;
+  }
+
   Type::type type() const { return descr_->physical_type(); }
 
   const ColumnDescriptor* descr() const { return descr_; }
@@ -125,8 +130,8 @@ class PARQUET_EXPORT TypedColumnReader : public ColumnReader {
   // This API is the same for both V1 and V2 of the DataPage
   //
   // @returns: actual number of levels read (see values_read for number of values read)
-  int64_t ReadBatch(int batch_size, int16_t* def_levels, int16_t* rep_levels, T* values,
-      int64_t* values_read);
+  int64_t ReadBatch(int32_t batch_size, int16_t* def_levels, int16_t* rep_levels,
+      T* values, int64_t* values_read, bool* is_null = NULL);
 
   // Skip reading levels
   // Returns the number of levels skipped
@@ -162,7 +167,7 @@ inline int64_t TypedColumnReader<DType>::ReadValues(int64_t batch_size, T* out) 
 
 template <typename DType>
 inline int64_t TypedColumnReader<DType>::ReadBatch(int batch_size, int16_t* def_levels,
-    int16_t* rep_levels, T* values, int64_t* values_read) {
+    int16_t* rep_levels, T* values, int64_t* values_read, bool* is_null) {
   // HasNext invokes ReadNewPage
   if (!HasNext()) {
     *values_read = 0;
@@ -179,16 +184,28 @@ inline int64_t TypedColumnReader<DType>::ReadBatch(int batch_size, int16_t* def_
   int64_t values_to_read = 0;
 
   // If the field is required and non-repeated, there are no definition levels
-  if (descr_->max_definition_level() > 0 && def_levels) {
+  if (descr_->max_definition_level() > 0) {
     num_def_levels = ReadDefinitionLevels(batch_size, def_levels);
     // TODO(wesm): this tallying of values-to-decode can be performed with better
     // cache-efficiency if fused with the level decoding.
-    for (int64_t i = 0; i < num_def_levels; ++i) {
-      if (def_levels[i] == descr_->max_definition_level()) { ++values_to_read; }
+    if (is_null != NULL) {
+      for (int64_t i = 0; i < num_def_levels; ++i) {
+        if (def_levels[i] == descr_->max_definition_level()) {
+          ++values_to_read;
+          is_null[i] = false;
+        } else {
+          is_null[i] = true;
+        }
+      }
+    } else {
+      for (int64_t i = 0; i < num_def_levels; ++i) {
+        if (def_levels[i] == descr_->max_definition_level()) { ++values_to_read; }
+      }
     }
   } else {
     // Required field, read all values
     values_to_read = batch_size;
+    if (is_null != NULL) { memset(is_null, false, batch_size); }
   }
 
   // Not present for non-repeated fields

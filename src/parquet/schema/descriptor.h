@@ -112,6 +112,8 @@ class PARQUET_EXPORT SchemaDescriptor {
  private:
   friend class ColumnDescriptor;
 
+  bool has_complex_type_;
+
   schema::NodePtr schema_;
   const schema::GroupNode* group_node_;
 

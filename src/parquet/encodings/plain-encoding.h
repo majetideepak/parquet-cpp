@@ -131,7 +131,7 @@ class PlainDecoder<BooleanType> : public Decoder<BooleanType> {
   // Two flavors of bool decoding
   int Decode(uint8_t* buffer, int max_values) {
     max_values = std::min(max_values, num_values_);
-    bool val;
+    bool val = false;
     for (int i = 0; i < max_values; ++i) {
       if (!bit_reader_.GetValue(1, &val)) { ParquetException::EofException(); }
       BitUtil::SetArrayBit(buffer, i, val);

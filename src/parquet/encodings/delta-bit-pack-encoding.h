@@ -93,7 +93,7 @@ class DeltaBitPackDecoder : public Decoder<DType> {
       }
 
       // TODO: the key to this algorithm is to decode the entire miniblock at once.
-      int64_t delta;
+      int64_t delta = 0;
       if (!decoder_.GetValue(delta_bit_width_, &delta)) ParquetException::EofException();
       delta += min_delta_;
       last_value_ += delta;

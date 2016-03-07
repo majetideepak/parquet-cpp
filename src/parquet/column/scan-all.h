@@ -29,7 +29,7 @@ int64_t ScanAll(int32_t batch_size, int16_t* def_levels, int16_t* rep_levels,
   auto typed_reader = static_cast<RType*>(reader);
   auto vals = reinterpret_cast<Type*>(&values[0]);
   return typed_reader->ReadBatch(
-      batch_size, def_levels, rep_levels, vals, values_buffered);
+      batch_size, def_levels, rep_levels, vals, values_buffered, NULL);
 }
 
 int64_t PARQUET_EXPORT ScanAllValues(int32_t batch_size, int16_t* def_levels,

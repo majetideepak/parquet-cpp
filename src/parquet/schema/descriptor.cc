@@ -34,6 +34,7 @@ void SchemaDescriptor::Init(std::unique_ptr<schema::Node> schema) {
 
 void SchemaDescriptor::Init(const NodePtr& schema) {
   schema_ = schema;
+  has_complex_type_ = false;
 
   if (!schema_->is_group()) {
     throw ParquetException("Must initialize with a schema group");

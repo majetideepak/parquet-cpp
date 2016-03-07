@@ -19,6 +19,7 @@
 #define PARQUET_FILE_READER_INTERNAL_H
 
 #include <cstdint>
+#include <list>
 #include <memory>
 #include <vector>
 
