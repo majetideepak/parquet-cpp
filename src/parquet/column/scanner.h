@@ -62,17 +62,24 @@ class Scanner {
 
   bool HasNext() { return level_offset_ < levels_buffered_ || reader_->HasNext(); }
 
+  virtual int64_t CountValues() = 0;
+
+  bool HasReaderNext() { return reader_->HasNext(); }
+
   const ColumnDescriptor* descr() const { return reader_->descr(); }
 
   int64_t batch_size() const { return batch_size_; }
 
   void SetBatchSize(int64_t batch_size) { batch_size_ = batch_size; }
 
+  int64_t buffer_size() const { return value_buffer_.size(); }
+
  protected:
   int64_t batch_size_;
 
   std::vector<int16_t> def_levels_;
   std::vector<int16_t> rep_levels_;
+
   int level_offset_;
   int levels_buffered_;
 
@@ -136,6 +143,32 @@ class TypedScanner : public Scanner {
     return true;
   }
 
+  // Returns a bulk of values and number of values read
+  int64_t NextBulkValues(T* val, int16_t* def_levels, int16_t* rep_levels,
+      bool* is_null = NULL, int chunk_size = 0, ReadMode rmode = NO_NULLS) {
+    int level_index = 0;
+    int value_index = 0;
+    int64_t values_to_read = chunk_size;
+    value_offset_ = 0;
+    level_offset_ = 0;
+
+    while (chunk_size > 0) {
+      if (!HasReaderNext()) {
+        memset(is_null + level_index, true, chunk_size);
+        return values_to_read - chunk_size;
+      }
+      int64_t values_buffered = 0;
+      int levels_buffered = typed_reader_->ReadBatch(chunk_size, def_levels + level_index,
+          rep_levels + level_index, val + value_index, &values_buffered,
+          is_null + level_index, rmode);
+
+      level_index += levels_buffered;
+      chunk_size -= levels_buffered;
+      value_index += values_buffered;
+    }
+    return values_to_read;
+  }
+
   // Returns true if there is a next value
   bool NextValue(T* val, bool* is_null) {
     if (level_offset_ == levels_buffered_) {
@@ -158,6 +191,29 @@ class TypedScanner : public Scanner {
     }
     *val = values_[value_offset_++];
     return true;
+  }
+
+  virtual int64_t CountValues() {
+    std::vector<uint8_t> val;
+    std::vector<uint8_t> is_null;
+    std::vector<int16_t> def_ls;
+    std::vector<int16_t> rep_ls;
+
+    int batch_size = 8192;
+
+    def_ls.resize(batch_size);
+    rep_ls.resize(batch_size);
+    is_null.resize(batch_size);
+    val.resize(batch_size * sizeof(T));
+    int levels_read = 0;
+    int64_t total_values = 0;
+    do {
+      levels_read =
+          NextBulkValues(reinterpret_cast<T*>(val.data()), def_ls.data(), rep_ls.data(),
+              reinterpret_cast<bool*>(is_null.data()), batch_size, NULLS_DEF_REP);
+      total_values += levels_read;
+    } while (levels_read > 0);
+    return total_values;
   }
 
   virtual void PrintNext(std::ostream& out, int width) {

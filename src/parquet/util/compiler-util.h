@@ -49,8 +49,12 @@
 #elif defined(__GNUC__) || defined(__clang__)
 #define MANUALLY_ALIGNED_STRUCT(alignment) \
   _Pragma("pack(1)") struct __attribute__((aligned(alignment)))
+#ifdef HAS_MOVE_SEMANTICS
 #define STRUCT_END(name, size) \
   _Pragma("pack()") static_assert(sizeof(name) == size, "compiler breaks packing rules")
+#else
+#define STRUCT_END(name, size) _Pragma("pack()")
+#endif
 #else
 #error Unknown compiler, please define structure alignment macros
 #endif

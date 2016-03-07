@@ -34,6 +34,7 @@ void SchemaDescriptor::Init(std::unique_ptr<schema::Node> schema) {
 
 void SchemaDescriptor::Init(const NodePtr& schema) {
   schema_ = schema;
+  num_groups_ = 0;
 
   if (!schema_->is_group()) {
     throw ParquetException("Must initialize with a schema group");
@@ -60,6 +61,7 @@ void SchemaDescriptor::BuildTree(const NodePtr& node, int16_t max_def_level,
 
   // Now, walk the schema and create a ColumnDescriptor for each leaf node
   if (node->is_group()) {
+    num_groups_++;
     const GroupNode* group = static_cast<const GroupNode*>(node.get());
     for (int i = 0; i < group->field_count(); ++i) {
       BuildTree(group->field(i), max_def_level, max_rep_level, base);

@@ -19,6 +19,7 @@
 #define PARQUET_FILE_READER_INTERNAL_H
 
 #include <cstdint>
+#include <list>
 #include <memory>
 #include <vector>
 
@@ -82,6 +83,7 @@ class SerializedRowGroup : public RowGroupReader::Contents {
   virtual std::vector<Encoding::type> GetColumnEncodings(int i) const;
   virtual int64_t GetColumnCompressedSize(int i) const;
   virtual int64_t GetColumnUnCompressedSize(int i) const;
+  virtual int64_t GetFileOffset();
 
  private:
   RandomAccessSource* source_;
@@ -105,8 +107,12 @@ class SerializedFile : public ParquetFileReader::Contents {
   virtual std::shared_ptr<RowGroupReader> GetRowGroup(int i);
   virtual int64_t num_rows() const;
   virtual int num_columns() const;
+  virtual bool is_compressed_column(int row_group, int col_id) const;
   virtual int num_row_groups() const;
+  virtual int64_t metadata_length() const;
   virtual ~SerializedFile();
+  virtual ParquetFileReader::MemoryUsage EstimateMemoryUsage(
+      int row_group, std::list<int>& selected_columns);
 
  private:
   // This class takes ownership of the provided data source
@@ -116,6 +122,7 @@ class SerializedFile : public ParquetFileReader::Contents {
   std::unique_ptr<RandomAccessSource> source_;
   format::FileMetaData metadata_;
   ReaderProperties properties_;
+  uint32_t metadata_length_;
 
   void ParseMetaData();
 };

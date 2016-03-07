@@ -119,7 +119,7 @@ class TypedColumnReader : public ColumnReader {
   //
   // @returns: actual number of levels read (see values_read for number of values read)
   int64_t ReadBatch(int32_t batch_size, int16_t* def_levels, int16_t* rep_levels,
-      T* values, int64_t* values_read);
+      T* values, int64_t* values_read, bool* is_null = NULL, ReadMode r = NO_NULLS);
 
  private:
   typedef Decoder<DType> DecoderType;
@@ -151,7 +151,7 @@ inline int64_t TypedColumnReader<DType>::ReadValues(int64_t batch_size, T* out) 
 
 template <typename DType>
 inline int64_t TypedColumnReader<DType>::ReadBatch(int batch_size, int16_t* def_levels,
-    int16_t* rep_levels, T* values, int64_t* values_read) {
+    int16_t* rep_levels, T* values, int64_t* values_read, bool* is_null, ReadMode rmode) {
   // HasNext invokes ReadNewPage
   if (!HasNext()) {
     *values_read = 0;
@@ -172,12 +172,24 @@ inline int64_t TypedColumnReader<DType>::ReadBatch(int batch_size, int16_t* def_
     num_def_levels = ReadDefinitionLevels(batch_size, def_levels);
     // TODO(wesm): this tallying of values-to-decode can be performed with better
     // cache-efficiency if fused with the level decoding.
-    for (int64_t i = 0; i < num_def_levels; ++i) {
-      if (def_levels[i] == descr_->max_definition_level()) { ++values_to_read; }
+    if (rmode != NO_NULLS) {
+      for (int64_t i = 0; i < num_def_levels; ++i) {
+        if (def_levels[i] == descr_->max_definition_level()) {
+          ++values_to_read;
+          is_null[i] = false;
+        } else {
+          is_null[i] = true;
+        }
+      }
+    } else {
+      for (int64_t i = 0; i < num_def_levels; ++i) {
+        if (def_levels[i] == descr_->max_definition_level()) { ++values_to_read; }
+      }
     }
   } else {
     // Required field, read all values
     values_to_read = batch_size;
+    if (rmode != NO_NULLS) { memset(is_null, false, batch_size); }
   }
 
   // Not present for non-repeated fields

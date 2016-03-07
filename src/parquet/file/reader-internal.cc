@@ -155,7 +155,6 @@ int SerializedRowGroup::num_columns() const {
 std::unique_ptr<PageReader> SerializedRowGroup::GetColumnPageReader(int i) {
   // Read column chunk from the file
   const format::ColumnChunk& col = metadata_->columns[i];
-
   int64_t col_start = col.meta_data.data_page_offset;
   if (col.meta_data.__isset.dictionary_page_offset &&
       col_start > col.meta_data.dictionary_page_offset) {
@@ -169,6 +168,10 @@ std::unique_ptr<PageReader> SerializedRowGroup::GetColumnPageReader(int i) {
 
   return std::unique_ptr<PageReader>(new SerializedPageReader(
       std::move(stream), FromThrift(col.meta_data.codec), properties_.allocator()));
+}
+
+int64_t SerializedRowGroup::GetFileOffset() {
+  return metadata_->columns[0].file_offset;
 }
 
 RowGroupStatistics SerializedRowGroup::GetColumnStats(int i) const {
@@ -261,6 +264,31 @@ int SerializedFile::num_row_groups() const {
   return metadata_.row_groups.size();
 }
 
+bool SerializedFile::is_compressed_column(int row_group, int col_id) const {
+  return (metadata_.row_groups[row_group].columns[col_id].meta_data.codec !=
+          format::CompressionCodec::UNCOMPRESSED);
+}
+
+int64_t SerializedFile::metadata_length() const {
+  return static_cast<int64_t>(metadata_length_);
+}
+
+ParquetFileReader::MemoryUsage SerializedFile::EstimateMemoryUsage(
+    int row_group, std::list<int>& selected_columns) {
+  ParquetFileReader::MemoryUsage memory_usage;
+  format::RowGroup rg = metadata_.row_groups[row_group];
+  for (auto i : selected_columns) {
+    format::ColumnMetaData md = rg.columns[i].meta_data;
+    memory_usage.memory += md.total_compressed_size;
+    for (format::Encoding::type en : md.encodings) {
+      memory_usage.has_dictionary = memory_usage.has_dictionary ||
+                                    en == format::Encoding::PLAIN_DICTIONARY ||
+                                    en == format::Encoding::RLE_DICTIONARY;
+    }
+  }
+  return memory_usage;
+}
+
 SerializedFile::SerializedFile(std::unique_ptr<RandomAccessSource> source,
     ReaderProperties props = default_reader_properties())
     : source_(std::move(source)), properties_(props) {}
@@ -279,21 +307,21 @@ void SerializedFile::ParseMetaData() {
     throw ParquetException("Invalid parquet file. Corrupt footer.");
   }
 
-  uint32_t metadata_len = *reinterpret_cast<uint32_t*>(footer_buffer);
-  int64_t metadata_start = filesize - FOOTER_SIZE - metadata_len;
-  if (FOOTER_SIZE + metadata_len > filesize) {
+  metadata_length_ = *reinterpret_cast<uint32_t*>(footer_buffer);
+  int64_t metadata_start = filesize - FOOTER_SIZE - metadata_length_;
+  if (FOOTER_SIZE + metadata_length_ > filesize) {
     throw ParquetException(
         "Invalid parquet file. File is less than "
         "file metadata size.");
   }
   source_->Seek(metadata_start);
 
-  OwnedMutableBuffer metadata_buffer(metadata_len, properties_.allocator());
-  bytes_read = source_->Read(metadata_len, &metadata_buffer[0]);
-  if (bytes_read != metadata_len) {
+  OwnedMutableBuffer metadata_buffer(metadata_length_, properties_.allocator());
+  bytes_read = source_->Read(metadata_length_, &metadata_buffer[0]);
+  if (bytes_read != metadata_length_) {
     throw ParquetException("Invalid parquet file. Could not read metadata bytes.");
   }
-  DeserializeThriftMsg(&metadata_buffer[0], &metadata_len, &metadata_);
+  DeserializeThriftMsg(&metadata_buffer[0], &metadata_length_, &metadata_);
 
   schema::FlatSchemaConverter converter(&metadata_.schema[0], metadata_.schema.size());
   schema_.Init(converter.Convert());

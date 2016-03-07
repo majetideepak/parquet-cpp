@@ -448,6 +448,8 @@ set(LIBPARQUET_SRCS
   src/parquet/column/writer.cc
   src/parquet/column/scanner.cc
 
+  src/parquet/cxx09api/reader.cc
+
   src/parquet/file/reader.cc
   src/parquet/file/reader-internal.cc
   src/parquet/file/writer.cc
@@ -500,6 +502,7 @@ endif()
 
 add_subdirectory(src/parquet)
 add_subdirectory(src/parquet/api)
+add_subdirectory(src/parquet/cxx09api)
 add_subdirectory(src/parquet/column)
 add_subdirectory(src/parquet/compression)
 add_subdirectory(src/parquet/encodings)
