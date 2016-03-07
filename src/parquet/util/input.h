@@ -19,6 +19,7 @@
 #define PARQUET_UTIL_INPUT_H
 
 #include <parquet/util/mem-allocator.h>
+#include <parquet/cxx09api/types.h>
 
 #include <cstdint>
 #include <cstdio>

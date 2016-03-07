@@ -106,8 +106,12 @@ class SchemaDescriptor {
   // Returns the root (child of the schema root) node of the leaf(column) node
   const schema::NodePtr& GetColumnRoot(int i) const;
 
+  bool no_group_nodes() const { return (num_groups_ == 0); }
+
  private:
   friend class ColumnDescriptor;
+
+  int num_groups_;
 
   schema::NodePtr schema_;
   const schema::GroupNode* group_;

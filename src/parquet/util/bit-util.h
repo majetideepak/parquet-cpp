@@ -26,7 +26,7 @@
 #include <endian.h>
 #endif
 
-#include <cstdint>
+//#include <cstdint>
 
 #include "parquet/util/compiler-util.h"
 #include "parquet/util/cpu-info.h"

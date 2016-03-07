@@ -56,9 +56,27 @@ int main(int argc, char** argv) {
   }
 
   try {
+    TrackingAllocator allocator;
+    ReaderProperties props(&allocator);
     std::unique_ptr<ParquetFileReader> reader = ParquetFileReader::OpenFile(filename,
-        memory_map);
-    reader->DebugPrint(std::cout, columns, print_values);
+        memory_map, props);
+    int64_t batch_size = 128;
+    ParquetFileReader::MemoryUsage memory_usage;
+ 
+    for (int r = 0; r < reader->num_row_groups(); ++r) {
+      ParquetFileReader::MemoryUsage temp_memory_usage = reader->EstimateMemoryUsage(
+          columns, r, batch_size);
+      if (temp_memory_usage.memory > memory_usage.memory) {
+        memory_usage = temp_memory_usage;
+      }
+    }
+
+    reader->DebugPrint(std::cout, columns, batch_size, print_values);
+
+    std::cout << "Estimated memory use: " << memory_usage.memory << " bytes "
+        << (memory_usage.has_dictionary ? "(+ memory for " : "(no ")
+        << "dictionary encoding)\n"
+        << "Actual memory use: " << allocator.MaxMemory() << " bytes\n";
   } catch (const std::exception& e) {
     std::cerr << "Parquet error: "
               << e.what()

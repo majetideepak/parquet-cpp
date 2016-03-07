@@ -20,67 +20,11 @@
 
 #include <algorithm>
 #include <cstdint>
-#include <cstring>
-#include <sstream>
 #include <string>
 
-#include "parquet/util/compiler-util.h"
+#include "parquet/cxx09api/types.h"
 
 namespace parquet {
-
-// ----------------------------------------------------------------------
-// Metadata enums to match Thrift metadata
-//
-// The reason we maintain our own enums is to avoid transitive dependency on
-// the compiled Thrift headers (and thus thrift/Thrift.h) for users of the
-// public API. After building parquet-cpp, you should not need to include
-// Thrift headers in your application. This means some boilerplate to convert
-// between our types and Parquet's Thrift types.
-//
-// We can also add special values like NONE to distinguish between metadata
-// values being set and not set. As an example consider ConvertedType and
-// CompressionCodec
-
-// Mirrors parquet::Type
-struct Type {
-  enum type {
-    BOOLEAN = 0,
-    INT32 = 1,
-    INT64 = 2,
-    INT96 = 3,
-    FLOAT = 4,
-    DOUBLE = 5,
-    BYTE_ARRAY = 6,
-    FIXED_LEN_BYTE_ARRAY = 7
-  };
-};
-
-// Mirrors parquet::ConvertedType
-struct LogicalType {
-  enum type {
-    NONE,
-    UTF8,
-    MAP,
-    MAP_KEY_VALUE,
-    LIST,
-    ENUM,
-    DECIMAL,
-    DATE,
-    TIME_MILLIS,
-    TIMESTAMP_MILLIS,
-    UINT_8,
-    UINT_16,
-    UINT_32,
-    UINT_64,
-    INT_8,
-    INT_16,
-    INT_32,
-    INT_64,
-    JSON,
-    BSON,
-    INTERVAL
-  };
-};
 
 // Mirrors parquet::FieldRepetitionType
 struct Repetition {
@@ -110,72 +54,6 @@ struct Compression {
 struct PageType {
   enum type { DATA_PAGE, INDEX_PAGE, DICTIONARY_PAGE, DATA_PAGE_V2 };
 };
-
-// ----------------------------------------------------------------------
-
-struct ByteArray {
-  ByteArray() {}
-  ByteArray(uint32_t len, const uint8_t* ptr) : len(len), ptr(ptr) {}
-  uint32_t len;
-  const uint8_t* ptr;
-
-  bool operator==(const ByteArray& other) const {
-    return this->len == other.len && 0 == memcmp(this->ptr, other.ptr, this->len);
-  }
-
-  bool operator!=(const ByteArray& other) const {
-    return this->len != other.len || 0 != memcmp(this->ptr, other.ptr, this->len);
-  }
-};
-
-struct FixedLenByteArray {
-  FixedLenByteArray() {}
-  explicit FixedLenByteArray(const uint8_t* ptr) : ptr(ptr) {}
-  const uint8_t* ptr;
-};
-
-typedef FixedLenByteArray FLBA;
-
-MANUALLY_ALIGNED_STRUCT(1) Int96 {
-  uint32_t value[3];
-
-  bool operator==(const Int96& other) const {
-    return 0 == memcmp(this->value, other.value, 3 * sizeof(uint32_t));
-  }
-
-  bool operator!=(const Int96& other) const { return !(*this == other); }
-};
-STRUCT_END(Int96, 12);
-
-static inline std::string ByteArrayToString(const ByteArray& a) {
-  return std::string(reinterpret_cast<const char*>(a.ptr), a.len);
-}
-
-static inline std::string Int96ToString(const Int96& a) {
-  std::stringstream result;
-  for (int i = 0; i < 3; i++) {
-    result << a.value[i] << " ";
-  }
-  return result.str();
-}
-
-static inline std::string FixedLenByteArrayToString(const FixedLenByteArray& a, int len) {
-  const uint8_t* bytes = reinterpret_cast<const uint8_t*>(a.ptr);
-  std::stringstream result;
-  for (int i = 0; i < len; i++) {
-    result << (uint32_t)bytes[i] << " ";
-  }
-  return result.str();
-}
-
-static inline int ByteCompare(const ByteArray& x1, const ByteArray& x2) {
-  uint32_t len = std::min(x1.len, x2.len);
-  int cmp = memcmp(x1.ptr, x2.ptr, len);
-  if (cmp != 0) return cmp;
-  if (len < x1.len) return 1;
-  if (len < x2.len) return -1;
-  return 0;
-}
 
 template <int TYPE>
 struct type_traits {};
@@ -243,6 +121,13 @@ struct type_traits<Type::FIXED_LEN_BYTE_ARRAY> {
   static constexpr int value_byte_size = sizeof(FixedLenByteArray);
   static constexpr const char* printf_code = "s";
 };
+
+template <typename Type>
+inline std::string format_fwf(int width) {
+  std::stringstream ss;
+  ss << "%-" << width << type_traits<Type::type_num>::printf_code;
+  return ss.str();
+}
 
 template <Type::type TYPE>
 struct DataType {
