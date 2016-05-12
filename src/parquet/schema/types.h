@@ -31,6 +31,8 @@
 
 namespace parquet {
 
+class SchemaDescriptor;
+
 namespace schema {
 
 // List encodings: using the terminology from Impala to define different styles
@@ -106,7 +108,8 @@ class Node {
         repetition_(repetition),
         logical_type_(logical_type),
         id_(id),
-        parent_(nullptr) {}
+        parent_(nullptr),
+        num_leaves(0) {}
 
   virtual ~Node() {}
 
@@ -134,6 +137,8 @@ class Node {
 
   const Node* parent() const { return parent_; }
 
+  int get_num_leaves() const { return num_leaves; }
+
   // ToParquet returns an opaque void* to avoid exporting
   // parquet::SchemaElement into the public API
   virtual void ToParquet(void* opaque_element) const = 0;
@@ -154,9 +159,9 @@ class Node {
 
   virtual void Visit(Visitor* visitor) = 0;
   virtual void VisitConst(ConstVisitor* visitor) const = 0;
-
  protected:
   friend class GroupNode;
+  friend class parquet::SchemaDescriptor;
 
   Node::type type_;
   std::string name_;
@@ -165,9 +170,12 @@ class Node {
   int id_;
   // Nodes should not be shared, they have a single parent.
   const Node* parent_;
+  // Only the column roots have this value set for now.
+  int num_leaves;
 
   bool EqualsInternal(const Node* other) const;
   void SetParent(const Node* p_parent);
+  void incrementLeaves() { num_leaves++;}
 };
 
 // Save our breath all over the place with these typedefs

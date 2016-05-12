@@ -83,7 +83,7 @@ class SerializedRowGroup : public RowGroupReader::Contents {
   virtual std::vector<Encoding::type> GetColumnEncodings(int i) const;
   virtual int64_t GetColumnCompressedSize(int i) const;
   virtual int64_t GetColumnUnCompressedSize(int i) const;
-  virtual int64_t GetFileOffset();
+  virtual int64_t GetFileOffset() const;
 
  private:
   RandomAccessSource* source_;

@@ -9,9 +9,33 @@
 #include "parquet/column/reader.h"
 #include "parquet/column/scanner.h"
 #include "parquet/types.h"
+#include "parquet/schema/types.h"
 #include "parquet/util/mem-allocator.h"
 
 namespace parquet {
+
+class VGroupNode : public VNode {
+ public:
+  VGroupNode(const parquet::schema::GroupNode* node) : gnode_(node) {}
+  virtual bool IsGroupNode() {return true;}
+  virtual int GetScannerOffset() {return -1;}
+  virtual int GetLevelOffset() {return -1;}
+  bool IsRepeated() {return gnode_->is_repeated();}
+  bool IsRequired() {return gnode_->is_required();}
+  bool IsOptional() {return gnode_->is_optional();}
+  const parquet::schema::GroupNode* gnode_;
+  std::vector<VNodePtr> children_; 
+};
+
+class VLeafNode : public VNode {
+ public:
+  VLeafNode(int soffset, int loffset) : SOffset_(soffset), LOffset_(loffset) {}
+  virtual bool IsGroupNode() {return false;}
+  virtual int GetScannerOffset() {return SOffset_;}
+  virtual int GetLevelOffset() {return LOffset_;}
+  int SOffset_; 
+  int LOffset_; 
+};
 
 class MuteBufferImpl : public MuteBuffer {
  public:
@@ -144,7 +168,7 @@ class RowGroupAPI : public RowGroup {
 
   int64_t NumRows() { return group_reader_->num_rows(); }
 
-  bool HasStats(int col_id) { return group_reader_->HasColumnStats(col_id); }
+  bool HasStats(int col_id) { return group_reader_->IsColumnStatsSet(col_id); }
 
   const std::string* GetMin(int col_id) {
     return group_reader_->GetColumnStats(col_id).min;
@@ -186,11 +210,19 @@ class ReaderAPI : public Reader {
 
   int GetTypeScale(int i) { return reader_->column_schema(i)->type_scale(); }
 
+  bool IsComplexColumn(int i) { return reader_->descr()->GetColumnRoot(i)->is_group(); }
+
+  VNodePtr BuildComplexColumnTree(int i, int SOffset, int LOffset);
+
+  bool GetNumColumnSiblings(int i) { return reader_->descr()->GetColumnRoot(i)->get_num_leaves(); }
+
   bool IsFlatSchema() { return reader_->descr()->no_group_nodes(); }
 
   std::string& GetStreamName() { return stream_->GetName(); }
 
   int NumColumns() { return reader_->num_columns(); }
+
+  int NumVirtualColumns() { return reader_->num_virtual_columns(); }
 
   int NumRowGroups() { return reader_->num_row_groups(); }
 
@@ -215,6 +247,33 @@ class ReaderAPI : public Reader {
   std::unique_ptr<RandomAccessSource> source_;
   ReaderProperties properties_;
 };
+
+void buildComplexTree(VGroupNode* root, int soffset, int loffset, int& child_id) {
+
+   for (int i = 0; i < root->gnode_->field_count(); i++) {
+        if (root->gnode_->field(i)->is_group()) {
+            const parquet::schema::GroupNode* field =
+                static_cast<const parquet::schema::GroupNode*>(root->gnode_->field(i).get());
+            VNodePtr vfield = boost::shared_ptr<VGroupNode>(new VGroupNode(field));
+            root->children_.push_back(vfield);
+            buildComplexTree(static_cast<VGroupNode*>(vfield.get()), soffset, loffset, child_id);
+        } else {
+            root->children_.push_back(boost::shared_ptr<VLeafNode>(new VLeafNode(soffset + child_id, loffset + child_id)));
+            child_id++;
+        }
+   } 
+
+}
+
+VNodePtr ReaderAPI::BuildComplexColumnTree(int i, int SOffset, int LOffset) {
+  // The root is already verified to be a groupnode
+  const parquet::schema::GroupNode* root =
+      static_cast<const parquet::schema::GroupNode*>(reader_->descr()->GetColumnRoot(i).get());
+  VNodePtr vroot = boost::shared_ptr<VGroupNode>(new VGroupNode(root));
+  int child_id = 0;
+  buildComplexTree(static_cast<VGroupNode*>(vroot.get()), SOffset, LOffset, child_id);
+  return vroot;
+}
 
 boost::shared_ptr<Reader> Reader::getReader(
     ExternalInputStream* stream, int64_t column_buffer_size, MemoryAllocator* pool) {

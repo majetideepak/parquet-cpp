@@ -54,7 +54,32 @@ class ExternalInputStream {
 //
 // We can also add special values like NONE to distinguish between metadata
 // values being set and not set. As an example consider ConvertedType and
+
+// Mirrors parquet::FieldRepetitionType
+struct Repetition {
+  enum type { REQUIRED = 0, OPTIONAL = 1, REPEATED = 2 };
+};
+
+// Data encodings. Mirrors parquet::Encoding
+struct Encoding {
+  enum type {
+    PLAIN = 0,
+    PLAIN_DICTIONARY = 2,
+    RLE = 3,
+    BIT_PACKED = 4,
+    DELTA_BINARY_PACKED = 5,
+    DELTA_LENGTH_BYTE_ARRAY = 6,
+    DELTA_BYTE_ARRAY = 7,
+    RLE_DICTIONARY = 8
+  };
+};
+
 // CompressionCodec
+// Compression, mirrors parquet::CompressionCodec
+struct Compression {
+  enum type { UNCOMPRESSED, SNAPPY, GZIP, LZO };
+};
+
 
 // Mirrors parquet::Type
 struct Type {
@@ -163,11 +188,15 @@ static inline int ByteCompare(const ByteArray& x1, const ByteArray& x2) {
   return 0;
 }
 
+std::string compression_to_string(Compression::type t);
+
+std::string encoding_to_string(Encoding::type t);
+
 std::string logical_type_to_string(LogicalType::type t);
 
 std::string type_to_string(Type::type t);
 
-std::string FormatValue(Type::type parquet_type, const char* val, int length);
+std::string FormatStatValue(Type::type parquet_type, const char* val);
 
 }  // namespace parquet
 

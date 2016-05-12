@@ -170,7 +170,7 @@ std::unique_ptr<PageReader> SerializedRowGroup::GetColumnPageReader(int i) {
       std::move(stream), FromThrift(col.meta_data.codec), properties_.allocator()));
 }
 
-int64_t SerializedRowGroup::GetFileOffset() {
+int64_t SerializedRowGroup::GetFileOffset() const {
   return metadata_->columns[0].file_offset;
 }
 

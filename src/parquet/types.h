@@ -26,30 +26,6 @@
 
 namespace parquet {
 
-// Mirrors parquet::FieldRepetitionType
-struct Repetition {
-  enum type { REQUIRED = 0, OPTIONAL = 1, REPEATED = 2 };
-};
-
-// Data encodings. Mirrors parquet::Encoding
-struct Encoding {
-  enum type {
-    PLAIN = 0,
-    PLAIN_DICTIONARY = 2,
-    RLE = 3,
-    BIT_PACKED = 4,
-    DELTA_BINARY_PACKED = 5,
-    DELTA_LENGTH_BYTE_ARRAY = 6,
-    DELTA_BYTE_ARRAY = 7,
-    RLE_DICTIONARY = 8
-  };
-};
-
-// Compression, mirrors parquet::CompressionCodec
-struct Compression {
-  enum type { UNCOMPRESSED, SNAPPY, GZIP, LZO };
-};
-
 // parquet::PageType
 struct PageType {
   enum type { DATA_PAGE, INDEX_PAGE, DICTIONARY_PAGE, DATA_PAGE_V2 };
@@ -144,22 +120,6 @@ typedef DataType<Type::DOUBLE> DoubleType;
 typedef DataType<Type::BYTE_ARRAY> ByteArrayType;
 typedef DataType<Type::FIXED_LEN_BYTE_ARRAY> FLBAType;
 
-template <typename Type>
-inline std::string format_fwf(int width) {
-  std::stringstream ss;
-  ss << "%-" << width << type_traits<Type::type_num>::printf_code;
-  return ss.str();
-}
-
-std::string compression_to_string(Compression::type t);
-
-std::string encoding_to_string(Encoding::type t);
-
-std::string logical_type_to_string(LogicalType::type t);
-
-std::string type_to_string(Type::type t);
-
-std::string FormatStatValue(Type::type parquet_type, const char* val);
 }  // namespace parquet
 
 #endif  // PARQUET_TYPES_H

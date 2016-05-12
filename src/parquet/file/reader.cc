@@ -61,10 +61,6 @@ std::shared_ptr<ColumnReader> RowGroupReader::Column(int i) {
   return ColumnReader::Make(descr, std::move(page_reader), allocator_);
 }
 
-bool RowGroupReader::HasColumnStats(int i) const {
-  return contents_->HasColumnStats(i);
-}
-
 int64_t RowGroupReader::GetFileOffset() const {
   return contents_->GetFileOffset();
 }
@@ -144,6 +140,10 @@ int64_t ParquetFileReader::num_rows() const {
 
 int ParquetFileReader::num_columns() const {
   return schema_->num_columns();
+}
+
+int ParquetFileReader::num_virtual_columns() const {
+  return schema_->num_virtual_columns();
 }
 
 std::shared_ptr<RowGroupReader> ParquetFileReader::RowGroup(int i) {
