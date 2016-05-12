@@ -15,6 +15,15 @@
 
 namespace parquet {
 
+class VNode {
+ public:
+  virtual bool IsGroupNode() = 0;
+  virtual int GetScannerOffset() = 0;
+  virtual int GetLevelOffset() = 0;
+};
+
+typedef boost::shared_ptr<VNode> VNodePtr;
+
 class MuteBuffer {
  public:
   static boost::shared_ptr<MuteBuffer>
@@ -47,11 +56,15 @@ class Reader {
   virtual int GetTypeLength(int i) = 0;
   virtual int GetTypePrecision(int i) = 0;
   virtual int GetTypeScale(int i) = 0;
+  virtual bool IsComplexColumn(int i) = 0;
+  virtual VNodePtr BuildComplexColumnTree(int i, int offset, int incr) = 0;
+  virtual bool GetNumColumnSiblings(int i) = 0;
+  virtual bool IsFlatSchema() = 0;
   virtual std::string& GetStreamName() = 0;
   virtual int NumColumns() = 0;
+  virtual int NumVirtualColumns() = 0;
   virtual int NumRowGroups() = 0;
   virtual int64_t NumRows() = 0;
-  virtual bool IsFlatSchema() = 0;
   virtual boost::shared_ptr<RowGroup> GetRowGroup(int i) = 0;
   // API to return a Reader
   static boost::shared_ptr<Reader> getReader(

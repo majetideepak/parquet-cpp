@@ -49,9 +49,7 @@ class RowGroupReader {
   struct Contents {
     virtual int num_columns() const = 0;
     virtual int64_t num_rows() const = 0;
-    virtual RowGroupStatistics GetColumnStats(int i) = 0;
-    virtual bool IsColumnStatsSet(int i) = 0;
-    virtual int64_t GetFileOffset() = 0;
+    virtual int64_t GetFileOffset() const = 0;
     virtual std::unique_ptr<PageReader> GetColumnPageReader(int i) = 0;
     virtual RowGroupStatistics GetColumnStats(int i) const = 0;
     virtual bool IsColumnStatsSet(int i) const = 0;
@@ -73,9 +71,9 @@ class RowGroupReader {
   RowGroupStatistics GetColumnStats(int i) const;
   Compression::type GetColumnCompression(int i) const;
   std::vector<Encoding::type> GetColumnEncodings(int i) const;
+  bool IsColumnStatsSet(int i) const;
   int64_t GetColumnCompressedSize(int i) const;
   int64_t GetColumnUnCompressedSize(int i) const;
-  bool HasColumnStats(int i) const;
   int64_t GetFileOffset() const;
 
  private:
@@ -142,6 +140,7 @@ class ParquetFileReader {
 
   bool is_compressed_column(int, int);
   int num_columns() const;
+  int num_virtual_columns() const;
   int64_t num_rows() const;
   int num_row_groups() const;
 

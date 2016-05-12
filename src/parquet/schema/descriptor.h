@@ -29,8 +29,6 @@
 
 namespace parquet {
 
-class SchemaDescriptor;
-
 // The ColumnDescriptor encapsulates information necessary to interpret
 // primitive column data in the context of a particular schema. We have to
 // examine the node structure of a column's path to the root in the schema tree
@@ -98,6 +96,8 @@ class SchemaDescriptor {
 
   // The number of physical columns appearing in the file
   int num_columns() const { return leaves_.size(); }
+
+  int num_virtual_columns() const { return group_->field_count(); }
 
   const schema::NodePtr& schema() const { return schema_; }
 

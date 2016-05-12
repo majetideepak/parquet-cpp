@@ -69,6 +69,7 @@ void SchemaDescriptor::BuildTree(const NodePtr& node, int16_t max_def_level,
   } else {
     // Primitive node, append to leaves
     leaves_.push_back(ColumnDescriptor(node, max_def_level, max_rep_level, this));
+    base->incrementLeaves();
     leaf_to_base_.emplace(leaves_.size() - 1, base);
   }
 }
