@@ -246,7 +246,7 @@ void ParquetFileReader::DebugPrint(std::ostream& stream, std::list<int>& selecte
     stream << "--- Row Group " << r << " ---\n";
 
     auto group_reader = RowGroup(r);
-
+/*
     // Print column metadata
     for (auto i : selected_columns) {
       RowGroupStatistics stats = group_reader->GetColumnStats(i);
@@ -275,8 +275,17 @@ void ParquetFileReader::DebugPrint(std::ostream& stream, std::list<int>& selecte
              << ", compressed size: " << group_reader->GetColumnCompressedSize(i)
              << std::endl;
     }
+*/
 
-    if (!print_values) { continue; }
+    if (!print_values) { 
+        for (auto i : selected_columns) {
+            std::shared_ptr<ColumnReader> col_reader = group_reader->Column(i);
+            std::shared_ptr<Scanner> scanner = Scanner::Make(col_reader, batch_size, allocator_);
+            stream << scanner->CountValues() << " ";
+        }
+        stream << "\n";
+        continue; 
+    }
 
     static constexpr int bufsize = 25;
     char buffer[bufsize];
