@@ -44,6 +44,9 @@ void SchemaDescriptor::Init(const NodePtr& schema) {
   leaves_.clear();
 
   for (int i = 0; i < group_node_->field_count(); ++i) {
+    if (group_node_->field(i)->is_group()) {
+		has_complex_type_ = true;
+    }
     BuildTree(group_node_->field(i), 0, 0, group_node_->field(i));
   }
 }

@@ -170,7 +170,7 @@ class ReaderAPI : public Reader {
 
   virtual int NumRealColumns() const { return schema_->group_node()->field_count(); }
 
-  virtual bool IsFlatSchema() const { return (NumColumns() == NumRealColumns()); }
+  virtual bool IsFlatSchema() const { return !schema_->has_complex_type(); }
 
   virtual std::string& GetStreamName() const { return stream_->GetName(); }
 

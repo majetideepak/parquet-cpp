@@ -88,7 +88,7 @@ class PARQUET_EXPORT ColumnDescriptor {
 // TODO(wesm): this object can be recomputed from a Schema
 class PARQUET_EXPORT SchemaDescriptor {
  public:
-  SchemaDescriptor() {}
+  SchemaDescriptor() { has_complex_type_ = false; }
   ~SchemaDescriptor() {}
 
   // Analyze the schema
@@ -96,6 +96,8 @@ class PARQUET_EXPORT SchemaDescriptor {
   void Init(const schema::NodePtr& schema);
 
   const ColumnDescriptor* Column(int i) const;
+
+  bool has_complex_type() const { return has_complex_type_; }
 
   // The number of physical columns appearing in the file
   int num_columns() const { return leaves_.size(); }
