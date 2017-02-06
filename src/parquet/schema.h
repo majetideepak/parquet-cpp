@@ -353,7 +353,7 @@ class PARQUET_EXPORT ColumnDescriptor {
 // TODO(wesm): this object can be recomputed from a Schema
 class PARQUET_EXPORT SchemaDescriptor {
  public:
-  SchemaDescriptor() {}
+  SchemaDescriptor() : has_complex_type_(false) {}
   ~SchemaDescriptor() {}
 
   // Analyze the schema
@@ -361,11 +361,12 @@ class PARQUET_EXPORT SchemaDescriptor {
   void Init(const schema::NodePtr& schema);
 
   const ColumnDescriptor* Column(int i) const;
-
   bool Equals(const SchemaDescriptor& other) const;
 
   // The number of physical columns appearing in the file
   int num_columns() const { return leaves_.size(); }
+
+  bool has_complex_type() const { return has_complex_type_; }
 
   const schema::NodePtr& schema_root() const { return schema_; }
 
@@ -378,6 +379,7 @@ class PARQUET_EXPORT SchemaDescriptor {
 
  private:
   friend class ColumnDescriptor;
+  bool has_complex_type_;
 
   schema::NodePtr schema_;
   const schema::GroupNode* group_node_;

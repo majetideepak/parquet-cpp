@@ -330,7 +330,7 @@ endif ()
 
 message(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
 
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -fno-strict-aliasing")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -fno-strict-aliasing -Wno-unused-variable -Wno-maybe-uninitialized")
 
 if (PARQUET_USE_SSE)
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
@@ -516,7 +516,6 @@ set(LIBPARQUET_SRCS
   src/parquet/column/statistics.cc
 
   src/parquet/compression.cc
-  src/parquet/cxx09api/reader.cc
 
   src/parquet/file/metadata.cc
   src/parquet/file/reader.cc
@@ -609,7 +608,6 @@ endif()
 
 add_subdirectory(src/parquet)
 add_subdirectory(src/parquet/api)
-add_subdirectory(src/parquet/cxx09api)
 add_subdirectory(src/parquet/column)
 add_subdirectory(src/parquet/file)
 add_subdirectory(src/parquet/util)
