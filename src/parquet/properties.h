@@ -78,7 +78,7 @@ class PARQUET_EXPORT ReaderProperties {
 
 ReaderProperties PARQUET_EXPORT default_reader_properties();
 
-static constexpr int64_t DEFAULT_PAGE_SIZE = 1024 * 1024;
+static constexpr int64_t DEFAULT_PAGE_SIZE = 1024;
 static constexpr bool DEFAULT_IS_DICTIONARY_ENABLED = true;
 static constexpr int64_t DEFAULT_DICTIONARY_PAGE_SIZE_LIMIT = DEFAULT_PAGE_SIZE;
 static constexpr int64_t DEFAULT_WRITE_BATCH_SIZE = 1024;

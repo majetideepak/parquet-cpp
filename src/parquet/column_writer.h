@@ -117,6 +117,8 @@ class PARQUET_EXPORT ColumnWriter {
 
   int64_t rows_written() const { return rows_written_; }
 
+  int64_t TotalBytesWritten() const;
+
   const WriterProperties* properties() { return properties_; }
 
  protected:

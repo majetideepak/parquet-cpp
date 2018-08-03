@@ -47,7 +47,13 @@ void RowGroupWriter::Close() {
 
 ColumnWriter* RowGroupWriter::NextColumn() { return contents_->NextColumn(); }
 
+ColumnWriter* RowGroupWriter::GetColumn(int i) { return contents_->GetColumn(i); }
+
+void RowGroupWriter::InitColumns() { return contents_->InitColumns(); }
+
 int RowGroupWriter::current_column() { return contents_->current_column(); }
+
+int64_t RowGroupWriter::total_bytes_written() const { return contents_->total_bytes_written(); }
 
 int RowGroupWriter::num_columns() const { return contents_->num_columns(); }
 
@@ -78,6 +84,25 @@ class RowGroupSerializer : public RowGroupWriter::Contents {
     return num_rows_ < 0 ? 0 : num_rows_;
   }
 
+  void InitColumns() override {
+    // Throws an error if more columns are being written
+    for (int i = 0; i < num_columns(); i ++) {
+        auto col_meta = metadata_->NextColumnChunk();
+
+        const ColumnDescriptor* column_descr = col_meta->descr();
+        std::unique_ptr<PageWriter> pager =
+            PageWriter::Open(sink_, properties_->compression(column_descr->path()), col_meta,
+                    properties_->memory_pool());
+        auto column_writer = ColumnWriter::Make(col_meta, std::move(pager), properties_);
+        column_writers_.push_back(column_writer);
+    }
+  }
+
+  
+  ColumnWriter* GetColumn(int i) override {
+     return  column_writers_[i].get();
+  }
+
   ColumnWriter* NextColumn() override {
     if (current_column_writer_) {
       CheckRowsWritten();
@@ -102,6 +127,14 @@ class RowGroupSerializer : public RowGroupWriter::Contents {
 
   int current_column() const override { return metadata_->current_column(); }
 
+  int64_t total_bytes_written() const {
+      int64_t total_bytes = 0;
+      for (int i = 0; i < column_writers_.size(); i++) {
+          total_bytes += column_writers_[i]->TotalBytesWritten();
+      }
+      return total_bytes;
+  }
+
   void Close() override {
     if (!closed_) {
       closed_ = true;
@@ -110,6 +143,11 @@ class RowGroupSerializer : public RowGroupWriter::Contents {
         CheckRowsWritten();
         total_bytes_written_ += current_column_writer_->Close();
         current_column_writer_.reset();
+      }
+
+      for (int i = 0; i < column_writers_.size(); i++) {
+        total_bytes_written_ += column_writers_[i]->Close();
+        column_writers_[i].reset();
       }
 
       // Ensures all columns have been written
@@ -139,6 +177,7 @@ class RowGroupSerializer : public RowGroupWriter::Contents {
     }
   }
 
+  std::vector<std::shared_ptr<ColumnWriter>> column_writers_;
   std::shared_ptr<ColumnWriter> current_column_writer_;
 };
 

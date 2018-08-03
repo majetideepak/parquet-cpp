@@ -48,8 +48,11 @@ class PARQUET_EXPORT RowGroupWriter {
     virtual ~Contents() = default;
     virtual int num_columns() const = 0;
     virtual int64_t num_rows() const = 0;
+    virtual int64_t total_bytes_written() const = 0;
 
     virtual ColumnWriter* NextColumn() = 0;
+    virtual ColumnWriter* GetColumn(int i) = 0;
+    virtual void InitColumns() = 0;
     virtual int current_column() const = 0;
     virtual void Close() = 0;
   };
@@ -62,7 +65,9 @@ class PARQUET_EXPORT RowGroupWriter {
   /// valid until the next call to NextColumn or Close. As the contents are
   /// directly written to the sink, once a new column is started, the contents
   /// of the previous one cannot be modified anymore.
+  void InitColumns();
   ColumnWriter* NextColumn();
+  ColumnWriter* GetColumn(int i);
   /// Index of currently written column
   int current_column();
   void Close();
@@ -73,6 +78,8 @@ class PARQUET_EXPORT RowGroupWriter {
    * Number of rows that shall be written as part of this RowGroup.
    */
   int64_t num_rows() const;
+
+  int64_t total_bytes_written() const;
 
  private:
   // Holds a pointer to an instance of Contents implementation

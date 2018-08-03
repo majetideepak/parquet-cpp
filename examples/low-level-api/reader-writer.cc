@@ -122,12 +122,24 @@ int main(int argc, char** argv) {
         parquet::ParquetFileWriter::Open(out_file, schema, props);
 
     // Append a RowGroup with a specific number of rows.
+
     parquet::RowGroupWriter* rg_writer =
-        file_writer->AppendRowGroup(NUM_ROWS_PER_ROW_GROUP);
+        file_writer->AppendRowGroup();
+
+    rg_writer->InitColumns();
+   
+   int count = 0; 
+   while (count++ < 20) {
+
+    if(rg_writer->total_bytes_written() > 16) {
+        rg_writer->Close();
+        rg_writer =  file_writer->AppendRowGroup();
+        rg_writer->InitColumns();
+    }
 
     // Write the Bool column
     parquet::BoolWriter* bool_writer =
-        static_cast<parquet::BoolWriter*>(rg_writer->NextColumn());
+        static_cast<parquet::BoolWriter*>(rg_writer->GetColumn(0));
     for (int i = 0; i < NUM_ROWS_PER_ROW_GROUP; i++) {
       bool value = ((i % 2) == 0) ? true : false;
       bool_writer->WriteBatch(1, nullptr, nullptr, &value);
@@ -135,7 +147,7 @@ int main(int argc, char** argv) {
 
     // Write the Int32 column
     parquet::Int32Writer* int32_writer =
-        static_cast<parquet::Int32Writer*>(rg_writer->NextColumn());
+        static_cast<parquet::Int32Writer*>(rg_writer->GetColumn(1));
     for (int i = 0; i < NUM_ROWS_PER_ROW_GROUP; i++) {
       int32_t value = i;
       int32_writer->WriteBatch(1, nullptr, nullptr, &value);
@@ -143,7 +155,7 @@ int main(int argc, char** argv) {
 
     // Write the Int64 column. Each row has repeats twice.
     parquet::Int64Writer* int64_writer =
-        static_cast<parquet::Int64Writer*>(rg_writer->NextColumn());
+        static_cast<parquet::Int64Writer*>(rg_writer->GetColumn(2));
     for (int i = 0; i < 2 * NUM_ROWS_PER_ROW_GROUP; i++) {
       int64_t value = i * 1000 * 1000;
       value *= 1000 * 1000;
@@ -157,7 +169,7 @@ int main(int argc, char** argv) {
 
     // Write the INT96 column.
     parquet::Int96Writer* int96_writer =
-        static_cast<parquet::Int96Writer*>(rg_writer->NextColumn());
+        static_cast<parquet::Int96Writer*>(rg_writer->GetColumn(3));
     for (int i = 0; i < NUM_ROWS_PER_ROW_GROUP; i++) {
       parquet::Int96 value;
       value.value[0] = i;
@@ -168,7 +180,7 @@ int main(int argc, char** argv) {
 
     // Write the Float column
     parquet::FloatWriter* float_writer =
-        static_cast<parquet::FloatWriter*>(rg_writer->NextColumn());
+        static_cast<parquet::FloatWriter*>(rg_writer->GetColumn(4));
     for (int i = 0; i < NUM_ROWS_PER_ROW_GROUP; i++) {
       float value = static_cast<float>(i) * 1.1f;
       float_writer->WriteBatch(1, nullptr, nullptr, &value);
@@ -176,7 +188,7 @@ int main(int argc, char** argv) {
 
     // Write the Double column
     parquet::DoubleWriter* double_writer =
-        static_cast<parquet::DoubleWriter*>(rg_writer->NextColumn());
+        static_cast<parquet::DoubleWriter*>(rg_writer->GetColumn(5));
     for (int i = 0; i < NUM_ROWS_PER_ROW_GROUP; i++) {
       double value = i * 1.1111111;
       double_writer->WriteBatch(1, nullptr, nullptr, &value);
@@ -184,7 +196,7 @@ int main(int argc, char** argv) {
 
     // Write the ByteArray column. Make every alternate values NULL
     parquet::ByteArrayWriter* ba_writer =
-        static_cast<parquet::ByteArrayWriter*>(rg_writer->NextColumn());
+        static_cast<parquet::ByteArrayWriter*>(rg_writer->GetColumn(6));
     for (int i = 0; i < NUM_ROWS_PER_ROW_GROUP; i++) {
       parquet::ByteArray value;
       char hello[FIXED_LENGTH] = "parquet";
@@ -204,7 +216,7 @@ int main(int argc, char** argv) {
 
     // Write the FixedLengthByteArray column
     parquet::FixedLenByteArrayWriter* flba_writer =
-        static_cast<parquet::FixedLenByteArrayWriter*>(rg_writer->NextColumn());
+        static_cast<parquet::FixedLenByteArrayWriter*>(rg_writer->GetColumn(7));
     for (int i = 0; i < NUM_ROWS_PER_ROW_GROUP; i++) {
       parquet::FixedLenByteArray value;
       char v = static_cast<char>(i);
@@ -213,6 +225,9 @@ int main(int argc, char** argv) {
 
       flba_writer->WriteBatch(1, nullptr, nullptr, &value);
     }
+   }
+    //close the RowGroupWriter
+    rg_writer->Close();
 
     // Close the ParquetFileWriter
     file_writer->Close();

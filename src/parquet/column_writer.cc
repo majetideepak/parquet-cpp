@@ -326,6 +326,10 @@ void ColumnWriter::WriteRepetitionLevels(int64_t num_levels, const int16_t* leve
                                  sizeof(int16_t) * num_levels);
 }
 
+int64_t ColumnWriter::TotalBytesWritten() const {
+  return total_bytes_written_;
+}
+
 // return the size of the encoded buffer
 int64_t ColumnWriter::RleEncodeLevels(const Buffer& src_buffer,
                                       ResizableBuffer* dest_buffer, int16_t max_level) {
