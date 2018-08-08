@@ -131,7 +131,7 @@ int main(int argc, char** argv) {
    int count = 0; 
    while (count++ < 20) {
 
-    if(rg_writer->total_bytes_written() > 16) {
+    if(rg_writer->total_bytes_written() > 1024 /* 35*/) {
         rg_writer->Close();
         rg_writer =  file_writer->AppendRowGroup();
         rg_writer->InitColumns();
@@ -253,7 +253,7 @@ int main(int argc, char** argv) {
 
     // Get the number of RowGroups
     int num_row_groups = file_metadata->num_row_groups();
-    assert(num_row_groups == 1);
+    //assert(num_row_groups == 1);
 
     // Get the number of Columns
     int num_columns = file_metadata->num_columns();

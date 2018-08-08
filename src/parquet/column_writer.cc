@@ -280,7 +280,7 @@ std::shared_ptr<WriterProperties> default_writer_properties() {
 
 ColumnWriter::ColumnWriter(ColumnChunkMetaDataBuilder* metadata,
                            std::unique_ptr<PageWriter> pager, bool has_dictionary,
-                           Encoding::type encoding, const WriterProperties* properties)
+                           Encoding::type encoding, const WriterProperties* properties, bool save_dictionary)
     : metadata_(metadata),
       descr_(metadata->descr()),
       pager_(std::move(pager)),
@@ -294,7 +294,8 @@ ColumnWriter::ColumnWriter(ColumnChunkMetaDataBuilder* metadata,
       rows_written_(0),
       total_bytes_written_(0),
       closed_(false),
-      fallback_(false) {
+      fallback_(false),
+      save_dictionary_(save_dictionary) {
   definition_levels_sink_.reset(new InMemoryOutputStream(allocator_));
   repetition_levels_sink_.reset(new InMemoryOutputStream(allocator_));
   definition_levels_rle_ =
@@ -432,6 +433,12 @@ int64_t ColumnWriter::Close() {
       WriteDictionaryPage();
     }
 
+    if (save_dictionary_) {
+      total_bytes_written_ += pager_->WriteDictionaryPage(saved_dictionary_page_[0]);
+    }
+
+    save_dictionary_ = false;
+
     FlushBufferedDataPages();
 
     EncodedStatistics chunk_statistics = GetChunkStatistics();
@@ -457,10 +464,13 @@ void ColumnWriter::FlushBufferedDataPages() {
   if (num_buffered_values_ > 0) {
     AddDataPage();
   }
-  for (size_t i = 0; i < data_pages_.size(); i++) {
-    WriteDataPage(data_pages_[i]);
+  
+  if (!save_dictionary_) {
+      for (size_t i = 0; i < data_pages_.size(); i++) {
+          WriteDataPage(data_pages_[i]);
+      }
+      data_pages_.clear();
   }
-  data_pages_.clear();
 }
 
 // ----------------------------------------------------------------------
@@ -470,11 +480,12 @@ template <typename Type>
 TypedColumnWriter<Type>::TypedColumnWriter(ColumnChunkMetaDataBuilder* metadata,
                                            std::unique_ptr<PageWriter> pager,
                                            Encoding::type encoding,
-                                           const WriterProperties* properties)
+                                           const WriterProperties* properties,
+                                           bool save_dictionary)
     : ColumnWriter(metadata, std::move(pager),
                    (encoding == Encoding::PLAIN_DICTIONARY ||
                     encoding == Encoding::RLE_DICTIONARY),
-                   encoding, properties) {
+                   encoding, properties, save_dictionary) {
   switch (encoding) {
     case Encoding::PLAIN:
       current_encoder_.reset(new PlainEncoder<Type>(descr_, properties->memory_pool()));
@@ -522,7 +533,12 @@ void TypedColumnWriter<Type>::WriteDictionaryPage() {
 
   DictionaryPage page(buffer, dict_encoder->num_entries(),
                       properties_->dictionary_index_encoding());
-  total_bytes_written_ += pager_->WriteDictionaryPage(page);
+  if (save_dictionary_) {
+     saved_dictionary_page_.push_back(page);
+  }
+  else {
+      total_bytes_written_ += pager_->WriteDictionaryPage(page);
+  }
 }
 
 template <typename Type>
@@ -552,7 +568,8 @@ void TypedColumnWriter<Type>::ResetPageStatistics() {
 
 std::shared_ptr<ColumnWriter> ColumnWriter::Make(ColumnChunkMetaDataBuilder* metadata,
                                                  std::unique_ptr<PageWriter> pager,
-                                                 const WriterProperties* properties) {
+                                                 const WriterProperties* properties,
+                                                 bool save_dictionary) {
   const ColumnDescriptor* descr = metadata->descr();
   Encoding::type encoding = properties->encoding(descr->path());
   if (properties->dictionary_enabled(descr->path()) &&
@@ -562,28 +579,28 @@ std::shared_ptr<ColumnWriter> ColumnWriter::Make(ColumnChunkMetaDataBuilder* met
   switch (descr->physical_type()) {
     case Type::BOOLEAN:
       return std::make_shared<BoolWriter>(metadata, std::move(pager), encoding,
-                                          properties);
+                                          properties, save_dictionary);
     case Type::INT32:
       return std::make_shared<Int32Writer>(metadata, std::move(pager), encoding,
-                                           properties);
+                                           properties, save_dictionary);
     case Type::INT64:
       return std::make_shared<Int64Writer>(metadata, std::move(pager), encoding,
-                                           properties);
+                                           properties, save_dictionary);
     case Type::INT96:
       return std::make_shared<Int96Writer>(metadata, std::move(pager), encoding,
-                                           properties);
+                                           properties, save_dictionary);
     case Type::FLOAT:
       return std::make_shared<FloatWriter>(metadata, std::move(pager), encoding,
-                                           properties);
+                                           properties, save_dictionary);
     case Type::DOUBLE:
       return std::make_shared<DoubleWriter>(metadata, std::move(pager), encoding,
-                                            properties);
+                                            properties, save_dictionary);
     case Type::BYTE_ARRAY:
       return std::make_shared<ByteArrayWriter>(metadata, std::move(pager), encoding,
-                                               properties);
+                                               properties, save_dictionary);
     case Type::FIXED_LEN_BYTE_ARRAY:
       return std::make_shared<FixedLenByteArrayWriter>(metadata, std::move(pager),
-                                                       encoding, properties);
+                                                       encoding, properties, save_dictionary);
     default:
       ParquetException::NYI("type reader not implemented");
   }

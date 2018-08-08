@@ -96,13 +96,14 @@ class PARQUET_EXPORT ColumnWriter {
  public:
   ColumnWriter(ColumnChunkMetaDataBuilder*, std::unique_ptr<PageWriter>,
                bool has_dictionary, Encoding::type encoding,
-               const WriterProperties* properties);
+               const WriterProperties* properties, bool save_dictionary = false);
 
   virtual ~ColumnWriter() = default;
 
   static std::shared_ptr<ColumnWriter> Make(ColumnChunkMetaDataBuilder*,
                                             std::unique_ptr<PageWriter>,
-                                            const WriterProperties* properties);
+                                            const WriterProperties* properties,
+                                            bool save_dictionary = false);
 
   Type::type type() const { return descr_->physical_type(); }
 
@@ -211,6 +212,10 @@ class PARQUET_EXPORT ColumnWriter {
 
   std::vector<CompressedDataPage> data_pages_;
 
+  bool save_dictionary_;
+  std::vector<DictionaryPage> saved_dictionary_page_;
+  std::vector<CompressedDataPage> saved_data_pages_;
+
  private:
   void InitSinks();
 };
@@ -223,7 +228,7 @@ class PARQUET_EXPORT TypedColumnWriter : public ColumnWriter {
 
   TypedColumnWriter(ColumnChunkMetaDataBuilder* metadata,
                     std::unique_ptr<PageWriter> pager, Encoding::type encoding,
-                    const WriterProperties* properties);
+                    const WriterProperties* properties, bool save_dictionary = false);
 
   // Write a batch of repetition levels, definition levels, and values to the
   // column.
