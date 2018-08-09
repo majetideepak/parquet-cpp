@@ -401,7 +401,7 @@ void ColumnWriter::AddDataPage() {
 
   // Write the page to OutputStream eagerly if there is no dictionary or
   // if dictionary encoding has fallen back to PLAIN
-  if (has_dictionary_ && !fallback_) {  // Save pages until end of dictionary encoding
+  if (has_dictionary_ && (!fallback_ || save_dictionary_)) {  // Save pages until end of dictionary encoding
     std::shared_ptr<Buffer> compressed_data_copy;
     PARQUET_THROW_NOT_OK(compressed_data->Copy(0, compressed_data->size(), allocator_,
                                                &compressed_data_copy));
@@ -429,15 +429,12 @@ void ColumnWriter::WriteDataPage(const CompressedDataPage& page) {
 int64_t ColumnWriter::Close() {
   if (!closed_) {
     closed_ = true;
+    save_dictionary_ = false;
     if (has_dictionary_ && !fallback_) {
       WriteDictionaryPage();
+    } else if (has_dictionary_) {
+       total_bytes_written_ += pager_->WriteDictionaryPage(saved_dictionary_page_[0]);
     }
-
-    if (save_dictionary_) {
-      total_bytes_written_ += pager_->WriteDictionaryPage(saved_dictionary_page_[0]);
-    }
-
-    save_dictionary_ = false;
 
     FlushBufferedDataPages();
 
@@ -534,10 +531,10 @@ void TypedColumnWriter<Type>::WriteDictionaryPage() {
   DictionaryPage page(buffer, dict_encoder->num_entries(),
                       properties_->dictionary_index_encoding());
   if (save_dictionary_) {
-     saved_dictionary_page_.push_back(page);
+    saved_dictionary_page_.push_back(std::move(page));
   }
   else {
-      total_bytes_written_ += pager_->WriteDictionaryPage(page);
+    total_bytes_written_ += pager_->WriteDictionaryPage(page);
   }
 }
 

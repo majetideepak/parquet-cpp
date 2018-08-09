@@ -214,7 +214,6 @@ class PARQUET_EXPORT ColumnWriter {
 
   bool save_dictionary_;
   std::vector<DictionaryPage> saved_dictionary_page_;
-  std::vector<CompressedDataPage> saved_data_pages_;
 
  private:
   void InitSinks();
