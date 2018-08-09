@@ -49,6 +49,7 @@ class PARQUET_EXPORT RowGroupWriter {
     virtual int num_columns() const = 0;
     virtual int64_t num_rows() const = 0;
     virtual int64_t total_bytes_written() const = 0;
+    virtual int64_t total_compressed_bytes() const = 0;
 
     virtual ColumnWriter* NextColumn() = 0;
     virtual ColumnWriter* GetColumn(int i) = 0;
@@ -80,6 +81,8 @@ class PARQUET_EXPORT RowGroupWriter {
   int64_t num_rows() const;
 
   int64_t total_bytes_written() const;
+
+  int64_t total_compressed_bytes() const;
 
  private:
   // Holds a pointer to an instance of Contents implementation

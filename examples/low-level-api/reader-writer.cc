@@ -131,8 +131,12 @@ int main(int argc, char** argv) {
    int count = 0; 
    while (count++ < 20) {
 
-    if(rg_writer->total_bytes_written() > 1024 /* 35*/) {
+    if(rg_writer->total_compressed_bytes() > 1024 /* 35*/) {
+        if(rg_writer->total_bytes_written() > 0) {
+          assert(false && false);
+        }
         rg_writer->Close();
+        return -1;
         rg_writer =  file_writer->AppendRowGroup();
         rg_writer->InitColumns();
     }

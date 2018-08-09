@@ -120,6 +120,8 @@ class PARQUET_EXPORT ColumnWriter {
 
   int64_t TotalBytesWritten() const;
 
+  int64_t TotalCompressedBytes() const;
+
   const WriterProperties* properties() { return properties_; }
 
  protected:
@@ -194,6 +196,8 @@ class PARQUET_EXPORT ColumnWriter {
 
   // Records the total number of bytes written by the serializer
   int64_t total_bytes_written_;
+
+  int64_t total_compressed_bytes_;
 
   // Flag to check if the Writer has been closed
   bool closed_;

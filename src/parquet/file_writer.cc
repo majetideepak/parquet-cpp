@@ -55,6 +55,8 @@ int RowGroupWriter::current_column() { return contents_->current_column(); }
 
 int64_t RowGroupWriter::total_bytes_written() const { return contents_->total_bytes_written(); }
 
+int64_t RowGroupWriter::total_compressed_bytes() const { return contents_->total_compressed_bytes(); }
+
 int RowGroupWriter::num_columns() const { return contents_->num_columns(); }
 
 int64_t RowGroupWriter::num_rows() const { return contents_->num_rows(); }
@@ -71,6 +73,7 @@ class RowGroupSerializer : public RowGroupWriter::Contents {
         metadata_(metadata),
         properties_(properties),
         total_bytes_written_(0),
+        total_compressed_bytes_(0),
         closed_(false),
         current_column_index_(0),
         num_rows_(-1) {}
@@ -135,6 +138,14 @@ class RowGroupSerializer : public RowGroupWriter::Contents {
       return total_bytes;
   }
 
+  int64_t total_compressed_bytes() const {
+      int64_t total_bytes = 0;
+      for (int i = 0; i < column_writers_.size(); i++) {
+          total_bytes += column_writers_[i]->TotalCompressedBytes();
+      }
+      return total_bytes;
+  }
+
   void Close() override {
     if (!closed_) {
       closed_ = true;
@@ -162,6 +173,7 @@ class RowGroupSerializer : public RowGroupWriter::Contents {
   mutable RowGroupMetaDataBuilder* metadata_;
   const WriterProperties* properties_;
   int64_t total_bytes_written_;
+  int64_t total_compressed_bytes_;
   bool closed_;
   int current_column_index_;
   mutable int64_t num_rows_;

@@ -293,6 +293,7 @@ ColumnWriter::ColumnWriter(ColumnChunkMetaDataBuilder* metadata,
       num_buffered_encoded_values_(0),
       rows_written_(0),
       total_bytes_written_(0),
+      total_compressed_bytes_(0),
       closed_(false),
       fallback_(false),
       save_dictionary_(save_dictionary) {
@@ -329,6 +330,10 @@ void ColumnWriter::WriteRepetitionLevels(int64_t num_levels, const int16_t* leve
 
 int64_t ColumnWriter::TotalBytesWritten() const {
   return total_bytes_written_;
+}
+
+int64_t ColumnWriter::TotalCompressedBytes() const {
+  return total_compressed_bytes_;
 }
 
 // return the size of the encoded buffer
@@ -408,11 +413,13 @@ void ColumnWriter::AddDataPage() {
     CompressedDataPage page(compressed_data_copy,
                             static_cast<int32_t>(num_buffered_values_), encoding_,
                             Encoding::RLE, Encoding::RLE, uncompressed_size, page_stats);
+    total_compressed_bytes_ += page.size();
     data_pages_.push_back(std::move(page));
   } else {  // Eagerly write pages
     CompressedDataPage page(compressed_data, static_cast<int32_t>(num_buffered_values_),
                             encoding_, Encoding::RLE, Encoding::RLE, uncompressed_size,
                             page_stats);
+    total_compressed_bytes_ += page.size();
     WriteDataPage(page);
   }
 
@@ -530,6 +537,7 @@ void TypedColumnWriter<Type>::WriteDictionaryPage() {
 
   DictionaryPage page(buffer, dict_encoder->num_entries(),
                       properties_->dictionary_index_encoding());
+  total_compressed_bytes_ += page.size();
   if (save_dictionary_) {
     saved_dictionary_page_.push_back(std::move(page));
   }
